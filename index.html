@@ -1,7 +1,9 @@
+<meta charset="utf-8">
 <title>Apollo Browser</title>
+<link rel="icon" type="image/png" href="logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,500;0,600;1,500;1,600;1,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,500;0,600;1,500;1,600;1,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:wght@500;600;700&display=swap">
 <style>
   :root{
     --ink:#14151c; --surface:#1b1d27; --surface-2:#232633; --line:#2b2e3a;
@@ -11,6 +13,10 @@
     --serif:"Newsreader",Georgia,"Times New Roman",serif;
     --sans:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
     --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+    /* Myriad Pro itself is an Adobe-licensed font we can't load from a CDN;
+       Source Sans is Adobe's own open humanist sans with similar proportions
+       — the closest freely-embeddable stand-in for the logo wordmark. */
+    --logo-sans:"Source Sans 3","Myriad Pro",-apple-system,"Segoe UI",sans-serif;
   }
   /* Dark-first: this page mirrors the shipped app's own default chrome, with
      a light variant for viewers who've chosen it. */
@@ -52,8 +58,8 @@
   }
   .brand{ display:flex; align-items:center; gap:10px; }
   .badge{ width:28px; height:28px; border-radius:50%; background:var(--sage); display:flex; align-items:center; justify-content:center; flex:none; }
-  .badge span{ font-family:var(--serif); font-style:italic; font-weight:600; font-size:15px; color:#111; transform:translate(-1px,1px); }
-  .brand-word{ font-family:var(--serif); font-style:italic; font-weight:500; font-size:18px; }
+  .logo-img{ width:30px; height:30px; flex:none; display:block; }
+  .brand-word{ font-family:var(--logo-sans); font-weight:600; font-size:18px; letter-spacing:-0.01em; }
   .nav-cta{
     font-family:var(--mono); font-size:12.5px; font-weight:600; letter-spacing:.01em;
     background:var(--sage); color:#14151c; padding:9px 16px; border-radius:100px; text-decoration:none; white-space:nowrap;
@@ -162,11 +168,32 @@
   .spec-line{ font-family:var(--mono); font-size:12px; color:var(--fg-faint); margin-top:18px; }
 
   footer{ padding:36px 0 56px; display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap; border-top:1px solid var(--rule); font-family:var(--mono); font-size:11.5px; color:var(--fg-faint); }
+
+  /* ---------- newsletter ---------- */
+  #newsletter{ padding-top:0; }
+  .newsletter-box{
+    border:1px solid var(--rule); border-radius:14px; padding:26px 32px; margin-top:8px;
+    background:var(--card); display:flex; align-items:center; justify-content:space-between; gap:24px; flex-wrap:wrap;
+  }
+  .newsletter-copy{ max-width:36ch; }
+  .newsletter-copy h3{ font-family:var(--sans); font-size:15px; font-weight:600; margin:0 0 4px; }
+  .newsletter-copy p{ font-size:13px; color:var(--fg-faint); margin:0; }
+  .newsletter-form{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .newsletter-form input[type=email]{
+    font-family:var(--sans); font-size:13.5px; padding:11px 14px; border-radius:10px;
+    border:1px solid var(--rule); background:var(--bg); color:var(--fg); min-width:220px;
+  }
+  .newsletter-form button{
+    font-family:var(--mono); font-weight:600; font-size:12.5px; padding:11px 18px; border-radius:10px;
+    border:none; background:var(--sage); color:#14151c; cursor:pointer; white-space:nowrap;
+  }
+  .newsletter-form button:disabled{ opacity:.6; cursor:default; }
+  .newsletter-status{ font-size:12px; color:var(--fg-faint); width:100%; min-height:14px; }
 </style>
 
 <nav class="nav">
   <div class="brand">
-    <div class="badge"><span>a</span></div>
+    <img class="logo-img" src="logo.png" alt="Apollo">
     <span class="brand-word">Apollo</span>
   </div>
   <a class="nav-cta" href="https://github.com/Basango/apollo-browser/releases/download/v1.0/Apollo-0.1.0-arm64.dmg">Download for Mac</a>
@@ -291,6 +318,20 @@
   </div>
 </section>
 
+<section class="wrap" id="newsletter">
+  <div class="newsletter-box">
+    <div class="newsletter-copy">
+      <h3>Apollo Weekly</h3>
+      <p>Occasional notes on what's new. Optional, unsubscribe anytime — no spam.</p>
+    </div>
+    <form class="newsletter-form" id="newsletterForm">
+      <input type="email" id="newsletterEmail" placeholder="you@email.com" required autocomplete="email">
+      <button type="submit" id="newsletterBtn">Subscribe</button>
+      <div class="newsletter-status" id="newsletterStatus"></div>
+    </form>
+  </div>
+</section>
+
 <footer class="wrap">
   <span>Apollo — v1 prototype</span>
   <span>Bring your own OpenAI key. No account, no server.</span>
@@ -318,4 +359,45 @@
       el.innerHTML = shown + '<span class="caret"></span>';
     }, 22);
   }
+
+  // Apollo Weekly signup — submits straight into a Google Form's own
+  // responses, which you link once (Form → Responses → the little Sheets
+  // icon) to auto-sync into a Google Sheet in real time. No Apps Script, no
+  // deployment — just the form's own submission URL and the entry ID of its
+  // Email question. See the setup steps for how to get both of these.
+  const FORM_ACTION = "https://docs.google.com/forms/d/e/1FAIpQLSfpAHCgHTapmAiuPcNnb_ECYJevpSkHXiYRAzzu9vxL3OUnxA/formResponse";
+  const FORM_EMAIL_FIELD = "entry.234450034";
+
+  const newsletterForm = document.getElementById('newsletterForm');
+  const newsletterStatus = document.getElementById('newsletterStatus');
+  const newsletterBtn = document.getElementById('newsletterBtn');
+  newsletterForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const emailInput = document.getElementById('newsletterEmail');
+    const email = emailInput.value.trim();
+    if (!email) return;
+    if (FORM_ACTION.includes("PASTE_") || FORM_EMAIL_FIELD.includes("PASTE_")) {
+      newsletterStatus.textContent = "Signup isn't wired up yet — see the setup steps.";
+      return;
+    }
+    newsletterBtn.disabled = true;
+    newsletterStatus.textContent = 'Adding you…';
+    try {
+      // mode: "no-cors" — a cross-origin POST to Google's own domain can't
+      // have its response read from here either way; this just fires the
+      // submission. A genuine failure (bad entry ID, form closed) won't
+      // surface here — check the linked Sheet after your first real test.
+      await fetch(FORM_ACTION, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ [FORM_EMAIL_FIELD]: email }).toString(),
+      });
+      newsletterStatus.textContent = "You're on the list — thanks!";
+      emailInput.value = '';
+    } catch (err) {
+      newsletterStatus.textContent = "Couldn't reach the list right now — try again in a bit.";
+      newsletterBtn.disabled = false;
+    }
+  });
 </script>
