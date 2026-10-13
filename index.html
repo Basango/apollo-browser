@@ -238,6 +238,7 @@
       <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v13M7 11l5 5 5-5M5 21h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       Download for Mac
     </a>
+    <a class="btn-ghost" data-download="win" href="https://github.com/Basango/apollo-browser/releases/download/v1.0/Apollo-Windows-Demo.zip">Windows demo</a>
     <a class="btn-ghost" href="#how">See how it works ↓</a>
   </div>
 
@@ -345,6 +346,7 @@
       Download for Mac
     </a>
     <div class="spec-line">Apollo-0.1.0-arm64.dmg · macOS 12+ · Apple Silicon</div>
+    <div class="spec-line"><a data-download="win" href="https://github.com/Basango/apollo-browser/releases/download/v1.0/Apollo-Windows-Demo.zip">Windows demo</a> · Apollo-Windows-Demo.zip · Windows 10/11 · early build, not signed yet</div>
   </div>
 </section>
 
@@ -372,7 +374,7 @@
   <div class="dl-card">
     <button class="dl-close" id="dlClose" aria-label="Close">&times;</button>
     <form id="dlForm" novalidate>
-      <h3 id="dlTitle">Download Apollo</h3>
+      <h3 id="dlTitle">Download Apollo for Mac</h3>
       <p>Enter your email to confirm your download.</p>
       <input type="email" id="dlEmail" placeholder="you@example.com" autocomplete="email" required>
       <label class="dl-check">
@@ -386,7 +388,8 @@
       <div class="tick">&#10003;</div>
       <h3>Your download has started</h3>
       <p id="dlDoneMsg"></p>
-      <div class="dl-note">First time opening it, macOS may warn that it's from an unidentified developer: <b>right-click Apollo and choose Open</b>, then Open again.</div>
+      <div class="dl-note" id="dlNoteMac">First time opening it, macOS may warn that it's from an unidentified developer: <b>right-click Apollo and choose Open</b>, then Open again.</div>
+      <div class="dl-note" id="dlNoteWin" hidden>Unzip it and double-click <b>Apollo.exe</b>. If Windows says "protected your PC", click <b>More info</b>, then <b>Run anyway</b> — it's an early demo and isn't signed yet. Nothing gets installed.</div>
       <div class="dl-note">Nothing happened? <a id="dlAgain" href="#">Download again</a>.</div>
     </div>
   </div>
@@ -460,7 +463,11 @@
   // confirms the download); only if "Apollo Weekly" is ticked is it added to the
   // list (same Google Form as the signup box below). Without JS the plain links
   // still download directly.
-  const DMG_URL = "https://github.com/Basango/apollo-browser/releases/download/v1.0/Apollo-0.1.0-arm64.dmg";
+  const DOWNLOADS = {
+    mac: { url: "https://github.com/Basango/apollo-browser/releases/download/v1.0/Apollo-0.1.0-arm64.dmg", title: "Download Apollo for Mac", button: "Download for Mac", file: ".dmg" },
+    win: { url: "https://github.com/Basango/apollo-browser/releases/download/v1.0/Apollo-Windows-Demo.zip", title: "Download Apollo for Windows (demo)", button: "Download Windows demo", file: ".zip" },
+  };
+  let dlPlatform = 'mac';
   const dlModal = document.getElementById('dlModal');
   const dlForm = document.getElementById('dlForm');
   const dlEmail = document.getElementById('dlEmail');
@@ -472,7 +479,7 @@
 
   function startDownload() {
     const a = document.createElement('a');
-    a.href = DMG_URL;
+    a.href = DOWNLOADS[dlPlatform].url;
     a.download = '';
     document.body.appendChild(a);
     a.click();
@@ -480,6 +487,11 @@
   }
   function openDl(opener) {
     dlOpener = opener || null;
+    dlPlatform = opener && opener.dataset.download === 'win' ? 'win' : 'mac';
+    document.getElementById('dlTitle').textContent = DOWNLOADS[dlPlatform].title;
+    dlSubmit.textContent = DOWNLOADS[dlPlatform].button;
+    document.getElementById('dlNoteMac').hidden = dlPlatform !== 'mac';
+    document.getElementById('dlNoteWin').hidden = dlPlatform !== 'win';
     dlForm.hidden = false;
     dlDone.hidden = true;
     dlError.textContent = '';
@@ -501,6 +513,14 @@
       openDl(a);
     })
   );
+  // Windows visitors: the main buttons offer the Windows demo (Mac visitors see Mac).
+  if (/Windows/i.test(navigator.userAgent)) {
+    document.querySelectorAll('a.nav-cta[data-download], a.btn-primary[data-download]').forEach((a) => {
+      a.dataset.download = 'win';
+      a.href = DOWNLOADS.win.url;
+      a.innerHTML = a.innerHTML.replace('Download for Mac', 'Download for Windows (demo)');
+    });
+  }
   document.getElementById('dlClose').addEventListener('click', closeDl);
   dlModal.addEventListener('click', (e) => { if (e.target === dlModal) closeDl(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !dlModal.hidden) closeDl(); });
@@ -529,9 +549,8 @@
       }
     }
     startDownload();
-    document.getElementById('dlDoneMsg').textContent = dlJoin.checked
-      ? "You're on the Apollo Weekly list too — thanks! Look for the .dmg in your Downloads folder."
-      : 'Look for the .dmg in your Downloads folder, open it, and drag Apollo into Applications.';
+    const where = dlPlatform === 'win' ? 'Look for Apollo-Windows-Demo.zip in your Downloads folder.' : 'Look for the .dmg in your Downloads folder, open it, and drag Apollo into Applications.';
+    document.getElementById('dlDoneMsg').textContent = dlJoin.checked ? "You're on the Apollo Weekly list too — thanks! " + where : where;
     dlForm.hidden = true;
     dlDone.hidden = false;
   });
